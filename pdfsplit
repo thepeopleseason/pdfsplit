@@ -1,0 +1,57 @@
+#!/usr/bin/perl
+#
+
+use strict;
+use PDF::API2;
+use Getopt::Std;
+
+my %opts;
+getopts('hvs:o:f:l:', \%opts);
+
+$0 =~ s/(.+)\/(.+)$/$2/;
+my $program = $0;
+
+if ($opts{h}) {
+  &helpmesg;
+}
+
+if (!$opts{o}) {
+  $opts{o} = $opts{s};
+  $opts{o} =~ s/\.pdf$//;
+  $opts{o} .= " page";
+}
+
+my $source = PDF::API2->open($opts{s});
+my $count = $source->pages();
+my ($first, $last) = (
+  $opts{f} ? $opts{f} : 1,
+  $opts{l} ? $opts{l} : $count);
+
+for (my $x=$first; $x<=$last; $x++) {
+  my $pdf = PDF::API2->new();
+  my $page = $pdf->import_page($source, $x);
+  my $file = "$opts{o} ${x}.pdf";
+  print "generating $file...\n" if ($opts{v});
+  $pdf->saveas($file);
+}
+
+sub helpmesg {
+    my $usage = "$program [-h] [-v] [-s <source pdf>] [-f <start page number>] [-l <end page number> [-o outputfile]";
+
+    print << "EndOfText";
+$program -- version 1.0 (20201001) by James T. Hsiao.  Usage:
+  $usage
+  -h  print help message                  -v  verbose mode
+  -s  source pdf file                     -f  start page number
+  -o  output filename prefix              -l  end page number
+
+Examples:
+  $program -h                   => prints this message
+  $program -s foo.pdf -o "bar"  => generates "bar <pagenum>.pdf" for all
+    pages in foo.pdf
+  $program -s foo.pdf -f 2 -l 4 => generates "foo page <pagenum>.pdf" for
+    pages 2-4 in foo.pdf
+
+EndOfText
+    exit(1);
+}
